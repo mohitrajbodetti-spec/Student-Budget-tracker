@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Ledger — Student Budget Tracker (EDITH AI)</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="appContainer" class="app-layout locked">
+
+    <!-- Toast Notification Banner -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Heads-Up Android Notification Banner -->
+    <div id="headsUpBanner" class="heads-up-banner hidden">
+      <div class="banner-icon">🔔</div>
+      <div class="banner-content">
+        <div class="banner-header">
+          <span id="bannerApp" class="banner-app">Google Pay</span>
+          <span class="banner-time">Just now</span>
+        </div>
+        <p id="bannerText" class="banner-text">₹220 paid to Uber India</p>
+      </div>
+      <button id="bannerDismissBtn" class="banner-close">&times;</button>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="brand-group">
+          <div class="brand-icon">🎓</div>
+          <div>
+            <div class="brand-title-wrap">
+              <span class="brand-title">Campus Ledger</span>
+              <span class="badge-amber">AI 2.5</span>
+            </div>
+            <p id="userGreeting" class="user-greeting">Logged Out</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="quickUpiBtn" class="btn-pill-amber" title="Simulate incoming UPI Payment Alert">
+            ⚡ <span class="hide-mobile">UPI Alert</span>
+          </button>
+
+          <button id="themeToggleBtn" class="btn-icon" title="Toggle Dark/Light Mode">
+            <span id="themeIcon">☀️</span>
+          </button>
+
+          <button id="frameToggleBtn" class="btn-icon hide-mobile" title="Toggle Mobile Phone Bezel View">📱</button>
+
+          <button id="notifBellBtn" class="btn-icon notif-bell" title="Notifications">
+            🔔
+            <span id="notifBadge" class="notif-badge hidden">0</span>
+          </button>
+
+          <div id="authHeaderBtnContainer"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Tabs / Slides -->
+    <main class="main-content">
+
+      <!-- SLIDE 1: DAILY LEDGER & MOBILE SENSOR -->
+      <section id="slide-1" class="tab-slide active">
+
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-head">
+              <span class="metric-label">Current Balance</span>
+              <button id="editBalanceBtn" class="metric-sub-action" title="Switch Auto/Manual Balance">
+                ⚙️ <span id="balanceModeLabel">Auto</span>
+              </button>
+            </div>
+            <div class="metric-value-row">
+              <span class="currency">₹</span>
+              <span id="metricBalance" class="metric-value text-emerald">0</span>
+            </div>
+            <div class="metric-foot text-mute"><span id="balanceFootText">Auto-updated via ledger</span></div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-head">
+              <span class="metric-label">Monthly Allowance</span>
+              <span class="status-dot green"></span>
+            </div>
+            <div class="metric-value-row">
+              <span class="currency">₹</span>
+              <span id="metricAllowance" class="metric-value">0</span>
+            </div>
+            <div class="metric-foot text-mute">Budget period active</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-head">
+              <span class="metric-label">Spent this Month</span>
+              <span id="spendPctBadge" class="badge-rose">0%</span>
+            </div>
+            <div class="metric-value-row">
+              <span class="currency">₹</span>
+              <span id="metricSpent" class="metric-value text-rose">0</span>
+            </div>
+            <div class="metric-foot text-mute">Across 7 categories</div>
+          </div>
+
+          <div class="metric-card highlight-card">
+            <div class="metric-head">
+              <span class="metric-label text-amber">Safe Daily Limit</span>
+              <span class="badge-amber">Dynamic</span>
+            </div>
+            <div class="metric-value-row">
+              <span class="currency text-amber">₹</span>
+              <span id="metricDailySafe" class="metric-value text-amber">0</span>
+              <span class="per-day">/day</span>
+            </div>
+            <div class="metric-foot text-amber-dim">
+              <span id="metricDaysRemaining">0</span> days left this month
+            </div>
+          </div>
+        </div>
+
+        <div id="budgetWarningBanner" class="alert-banner warning hidden">
+          ⚠️ <span id="budgetWarningText"></span>
+        </div>
+
+        <!-- Mobile Sensor & Android Bridge Hub -->
+        <div class="card-box sensor-box">
+          <div class="box-header">
+            <div class="box-title-group">
+              <span class="box-icon">📱</span>
+              <div>
+                <h3 class="box-title">Mobile SMS & Notification Sensor</h3>
+                <p class="box-desc">Capture bank SMS & UPI alerts with zero manual typing</p>
+              </div>
+            </div>
+            <button id="openBridgeModalBtn" class="btn-small-outline">⚙️ Setup Bridge</button>
+          </div>
+
+          <div class="sensor-actions-row">
+            <button id="webOtpBtn" class="btn-action-emerald">
+              📡 <span>Start Listening for Phone SMS (WebOTP)</span>
+            </button>
+            <button id="readClipboardBtn" class="btn-action-surface">
+              📋 <span>Read Copied SMS / Alert</span>
+            </button>
+          </div>
+
+          <div class="sms-input-wrap">
+            <input type="text" id="smsInputBox" placeholder="Paste bank SMS: e.g. A/c debited by Rs.220 for Swiggy..." />
+            <button id="parseSmsBtn" class="btn-amber">Auto Classify</button>
+          </div>
+
+          <div class="preset-pills">
+            <span class="preset-label">Test SMS:</span>
+            <button class="pill-tag" data-text="A/c debited by Rs 220 at Swiggy via UPI ref 492019">Swiggy ₹220</button>
+            <button class="pill-tag" data-text="Rs 650 debited for Sri Ganesh Books Store via UPI">Books ₹650</button>
+            <button class="pill-tag" data-text="A/c debited by Rs 180 for Uber Ride via GooglePay">Uber ₹180</button>
+            <button class="pill-tag" data-text="A/c credited by Rs 5000 from Dad Allowance UPI">Allowance +₹5000</button>
+          </div>
+        </div>
+
+        <!-- Transactions Ledger -->
+        <div class="card-box ledger-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">Transactions Ledger</h3>
+              <p class="box-desc">Searchable list of all recorded expenses and incomes</p>
+            </div>
+            <button id="openAddTxModalBtn" class="btn-amber">+ Add Entry</button>
+          </div>
+
+          <div class="ledger-filter-row">
+            <input type="text" id="txSearchInput" class="search-input" placeholder="Search merchant or category..." />
+            <div class="filter-pills">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="debit">Expenses</button>
+              <button class="filter-btn" data-filter="credit">Incomes</button>
+            </div>
+          </div>
+
+          <div id="txListContainer" class="tx-list"></div>
+        </div>
+      </section>
+
+      <!-- SLIDE 2: ANALYTICS & BUDGET LIMITS -->
+      <section id="slide-2" class="tab-slide">
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">50 / 30 / 20 Student Budget Balance</h3>
+              <p class="box-desc">Target: 50% Needs, 30% Wants, 20% Protected Savings (share of monthly allowance)</p>
+            </div>
+          </div>
+
+          <div class="stacked-bar-container">
+            <div id="barNeeds" class="stacked-bar-segment needs" style="width: 50%;">Needs 50%</div>
+            <div id="barWants" class="stacked-bar-segment wants" style="width: 30%;">Wants 30%</div>
+            <div id="barSavings" class="stacked-bar-segment savings" style="width: 20%;">Savings 20%</div>
+          </div>
+
+          <div class="rule-metrics-row">
+            <div class="rule-metric-item">
+              <span class="rule-dot needs"></span>
+              <div>
+                <div class="text-mute text-xs">Needs (Food, Bills, Books)</div>
+                <strong id="valNeeds">₹0 (0%)</strong>
+              </div>
+            </div>
+            <div class="rule-metric-item">
+              <span class="rule-dot wants"></span>
+              <div>
+                <div class="text-mute text-xs">Wants (Outings, Shopping, Travel)</div>
+                <strong id="valWants">₹0 (0%)</strong>
+              </div>
+            </div>
+            <div class="rule-metric-item">
+              <span class="rule-dot savings"></span>
+              <div>
+                <div class="text-mute text-xs">Savings (Unspent)</div>
+                <strong id="valSavings">₹0 (0%)</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card-box">
+            <h3 class="box-title">Spending by Category</h3>
+            <div class="donut-chart-wrap">
+              <svg id="categoryDonutSvg" viewBox="0 0 100 100" class="donut-svg"></svg>
+              <div id="donutLegend" class="donut-legend"></div>
+            </div>
+          </div>
+
+          <div class="card-box">
+            <h3 class="box-title">7-Day Spending Trend</h3>
+            <div id="trendBarChart" class="trend-bars-wrap"></div>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">Category Monthly Budgets & Limits</h3>
+              <p class="box-desc">Tap ✏️ to change a monthly cap. Warnings appear at 80%.</p>
+            </div>
+          </div>
+          <div id="categoryBudgetsContainer" class="category-budgets-grid"></div>
+        </div>
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">EDITH Merchant Classifier Inspector</h3>
+              <p class="box-desc">Test merchant names, UPI IDs or SMS text to preview classification</p>
+            </div>
+          </div>
+          <div class="classifier-tester-row">
+            <input type="text" id="merchantTestInput" placeholder="Try: sriganesh.books@okaxis, swiggy, or uber..." />
+            <button id="merchantTestBtn" class="btn-amber">Test</button>
+          </div>
+          <div id="merchantTestResult" class="classifier-result hidden"></div>
+        </div>
+      </section>
+
+      <!-- SLIDE 3: EDITH AI COACH & GOALS -->
+      <section id="slide-3" class="tab-slide">
+
+        <div class="slide-nav-bar">
+          <button id="aiBackBtn" class="btn-back">← Back to Ledger</button>
+          <div class="ai-status-indicator">
+            <span class="status-pulse"></span>
+            <span>EDITH AI 2.5 Online</span>
+          </div>
+        </div>
+
+        <div class="card-box ai-hero-box">
+          <div class="ai-hero-header">
+            <div class="ai-avatar">🤖</div>
+            <div>
+              <h3 class="ai-title">EDITH Voice Affordability Agent</h3>
+              <p class="ai-desc">Speak or type — even several questions at once: <em>"Balance and spending on food this week?"</em>, <em>"Can I buy ₹4,000 headphones?"</em></p>
+            </div>
+          </div>
+
+          <div class="voice-controls-bar">
+            <button id="micBtn" class="mic-button" title="Click to speak with EDITH">
+              <span id="micIcon" class="mic-icon">🎙️</span>
+              <span id="micLabel">Tap to Speak with EDITH</span>
+            </button>
+            <label class="toggle-label">
+              <input type="checkbox" id="ttsVoiceToggle" checked />
+              <span>🔊 Voice Reply (TTS)</span>
+            </label>
+          </div>
+
+          <div class="suggestion-chips">
+            <button class="chip-btn" data-query="Can I buy dinner tonight?">🍽️ Can I buy dinner?</button>
+            <button class="chip-btn" data-query="How much did I spend on transport and food?">🚕 Transport &amp; food spend</button>
+            <button class="chip-btn" data-query="Will my money last till month end?">🔮 Month-end forecast</button>
+            <button class="chip-btn" data-query="Saving suggestions">💡 Saving suggestions</button>
+            <button class="chip-btn" data-query="Can I buy ₹4,000 headphones?">🎧 Buy ₹4,000 headphones?</button>
+            <button class="chip-btn" data-query="Give me a monthly summary">📋 Summary</button>
+            <button class="chip-btn" data-query="What can you do?">❓ What can you do?</button>
+          </div>
+
+          <div id="chatMessages" class="chat-thread"></div>
+
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Ask anything: affordability, spending, budgets, goals..." />
+            <button id="sendChatBtn" class="btn-amber">Send</button>
+          </div>
+        </div>
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">🎯 Savings Goals</h3>
+              <p class="box-desc">Protect your savings from impulsive daily spending</p>
+            </div>
+            <button id="openAddGoalModalBtn" class="btn-small-outline">+ New Goal</button>
+          </div>
+          <div id="goalsContainer" class="goals-grid"></div>
+        </div>
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">⏰ Budget Reminders</h3>
+              <p class="box-desc">Scheduled alerts for fees, subscriptions, and hostel expenses</p>
+            </div>
+            <button id="openAddReminderModalBtn" class="btn-small-outline">+ Add Reminder</button>
+          </div>
+          <div id="remindersContainer" class="reminders-list"></div>
+        </div>
+      </section>
+
+      <!-- SLIDE 4: ACCOUNTS & DATABASE -->
+      <section id="slide-4" class="tab-slide">
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">Account Details & Profile</h3>
+              <p class="box-desc">Manage the active profile, balance mode and device session</p>
+            </div>
+            <button id="switchProfileBtn" class="btn-small-outline">Switch Profile</button>
+          </div>
+
+          <div class="profile-info-grid">
+            <div id="profAvatar" class="profile-avatar">👨‍🎓</div>
+            <div class="profile-meta">
+              <h4 id="profName" class="prof-name">—</h4>
+              <p id="profEmail" class="prof-email">—</p>
+              <div class="prof-badge-row">
+                <span id="profRoleBadge" class="badge-amber">—</span>
+                <span class="badge-emerald">Saved in Account Database</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="balance-settings-box">
+            <h4 class="settings-subtitle">Account Balance Configuration</h4>
+            <div class="radio-row">
+              <label class="radio-card">
+                <input type="radio" name="balanceModeSetting" value="auto" id="radioAutoBalance" checked />
+                <div>
+                  <div class="radio-title">⚡ Automatic Balance (Recommended)</div>
+                  <div class="radio-desc">Opening balance + incomes − expenses from the ledger</div>
+                </div>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="balanceModeSetting" value="manual" id="radioManualBalance" />
+                <div>
+                  <div class="radio-title">✏️ Manual Balance Override</div>
+                  <div class="radio-desc">Set an exact balance; new spends are deducted from it</div>
+                </div>
+              </label>
+            </div>
+
+            <div id="manualBalanceInputGroup" class="manual-input-group hidden">
+              <label for="manualBalanceField">Set Exact Current Balance (₹):</label>
+              <div class="input-with-button">
+                <input type="number" id="manualBalanceField" value="0" min="0" />
+                <button id="saveManualBalanceBtn" class="btn-amber">Save Balance</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="logout-action-box">
+            <div>
+              <h4 class="logout-title">Device Session Security</h4>
+              <p class="logout-desc">
+                <strong>Log Out</strong> ends this session on this device. All transactions, balances and goals
+                <strong>remain preserved in the account database</strong> and return when you sign in again.
+              </p>
+            </div>
+            <button id="safeLogoutBtn" class="btn-rose">🚪 Log Out of This Device</button>
+          </div>
+        </div>
+
+        <!-- Multi-account manager -->
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">👥 All Accounts on This Device</h3>
+              <p class="box-desc">Each account has its own password and its own private data. Switching asks for the password.</p>
+            </div>
+            <button id="openAddAccountModalBtn" class="btn-amber">+ New Account</button>
+          </div>
+          <div id="accountsListContainer" class="accounts-grid"></div>
+        </div>
+
+        <div class="card-box">
+          <div class="box-header">
+            <div>
+              <h3 class="box-title">🗄️ Account Database (Local Storage)</h3>
+              <p class="box-desc">
+                Live inspection of stored collections. Password hashes are masked. Swap the storage helpers for Firestore to sync across devices.
+              </p>
+            </div>
+            <button id="copyDbJsonBtn" class="btn-small-outline">Copy JSON</button>
+          </div>
+
+          <div class="db-tabs-row">
+            <button class="db-tab active" data-db="users">users/{uid}</button>
+            <button class="db-tab" data-db="budgetPeriods">budgetPeriods</button>
+            <button class="db-tab" data-db="transactions">transactions</button>
+            <button class="db-tab" data-db="goals">goals, reminders &amp; EDITH memory</button>
+          </div>
+
+          <pre id="dbJsonViewer" class="db-json-viewer"></pre>
+        </div>
+
+        <div class="card-box">
+          <h3 class="box-title">Data Management</h3>
+          <div class="data-btn-row">
+            <button id="exportJsonBtn" class="btn-small-outline">📥 Export My Ledger Data (JSON)</button>
+            <button id="resetDemoBtn" class="btn-small-outline text-rose">🔄 Reset Everything to Demo Data</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-target="slide-1">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Ledger</span>
+      </button>
+      <button class="nav-tab" data-target="slide-2">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Analytics</span>
+      </button>
+      <button class="nav-tab" data-target="slide-3">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">EDITH AI</span>
+      </button>
+      <button class="nav-tab" data-target="slide-4">
+        <span class="nav-icon">👤</span>
+        <span class="nav-label">Account & DB</span>
+      </button>
+    </nav>
+
+    <!-- MODAL: LOGIN -->
+    <div id="loginModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <button id="loginBackBtn" class="btn-back">← Back</button>
+          <h3 class="modal-title">Account Sign In</h3>
+          <button id="loginCloseBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">
+            Choose an account or type its email, then enter that account's password. Passwords are never autofilled.
+            <span class="auth-hint">Demo accounts use password <code>demo1234</code>.</span>
+          </p>
+
+          <div class="form-group">
+            <label>Choose Account:</label>
+            <div id="loginAccountsPillsContainer" class="preset-profiles-row"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" autocomplete="off" />
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" autocomplete="new-password" placeholder="Enter password" />
+          </div>
+
+          <p id="loginError" class="form-error hidden"></p>
+
+          <button id="submitLoginBtn" class="btn-amber full-width">Sign In & Link Device</button>
+          <button id="openCreateFromLoginBtn" class="link-btn full-width" type="button">+ Create a new account</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: CREATE ACCOUNT -->
+    <div id="addAccountModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <button id="addAccountBackBtn" class="btn-back">← Back</button>
+          <h3 class="modal-title">Create Account</h3>
+          <button id="closeAddAccountModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newAccountName">Account Name</label>
+            <input type="text" id="newAccountName" placeholder="e.g. Priya (Student)" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="newAccountEmail">Email</label>
+            <input type="email" id="newAccountEmail" placeholder="name@example.com" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label for="newAccountRole">Account Type</label>
+            <select id="newAccountRole">
+              <option value="Student">🎓 Student</option>
+              <option value="Parent">👨‍💼 Parent</option>
+              <option value="Bank">🏦 Bank</option>
+              <option value="Cash">💵 Cash Wallet</option>
+              <option value="Shared">🤝 Shared</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="newAccountPassword">Password (min 6 characters)</label>
+            <input type="password" id="newAccountPassword" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label for="newAccountPassword2">Confirm Password</label>
+            <input type="password" id="newAccountPassword2" autocomplete="new-password" />
+          </div>
+          <div class="form-group">
+            <label for="newAccountAllowance">Monthly Allowance (₹)</label>
+            <input type="number" id="newAccountAllowance" value="10000" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="newAccountBalance">Starting Balance (₹) — optional</label>
+            <input type="number" id="newAccountBalance" placeholder="Defaults to the allowance" min="0" />
+          </div>
+          <p id="addAccountError" class="form-error hidden"></p>
+          <button id="saveAccountBtn" class="btn-amber full-width">Create Account & Sign In</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: NOTIFICATIONS -->
+    <div id="notifModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Captured Notifications</h3>
+          <button id="closeNotifModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="notifListContainer"></div>
+          <button id="clearNotifBtn" class="btn-small-outline full-width" style="margin-top:12px;">Clear all</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD TRANSACTION -->
+    <div id="addTxModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Record Transaction</h3>
+          <button id="closeAddTxModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Type</label>
+            <div class="type-toggle-row">
+              <button id="txTypeDebit" class="type-btn active" data-type="debit">Expense (Debit)</button>
+              <button id="txTypeCredit" class="type-btn" data-type="credit">Income (Credit)</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Amount (₹)</label>
+            <input type="number" id="newTxAmount" placeholder="e.g. 250" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Merchant / Sender</label>
+            <input type="text" id="newTxMerchant" placeholder="e.g. Swiggy, Metro, Canteen" />
+          </div>
+          <div class="form-group">
+            <label>Category (expenses)</label>
+            <select id="newTxCategory">
+              <option value="Food & Dining">Food & Dining</option>
+              <option value="Travel & Commute">Travel & Commute</option>
+              <option value="Books & Academics">Books & Academics</option>
+              <option value="Entertainment & Outings">Entertainment & Outings</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Bills & Utilities">Bills & Utilities</option>
+              <option value="Emergency / Health">Emergency / Health</option>
+            </select>
+          </div>
+          <button id="saveTxBtn" class="btn-amber full-width">Save Transaction</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD SAVINGS GOAL -->
+    <div id="addGoalModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Create Savings Goal</h3>
+          <button id="closeAddGoalModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Goal Name</label>
+            <input type="text" id="newGoalTitle" placeholder="e.g. Sony ANC Headphones" />
+          </div>
+          <div class="form-group">
+            <label>Target Amount (₹)</label>
+            <input type="number" id="newGoalTarget" placeholder="e.g. 4000" min="1" />
+          </div>
+          <div class="form-group">
+            <label>Initial Saved Amount (₹)</label>
+            <input type="number" id="newGoalInitial" value="500" min="0" />
+          </div>
+          <button id="saveGoalBtn" class="btn-amber full-width">Create Goal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ADD REMINDER -->
+    <div id="addReminderModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Add Budget Reminder</h3>
+          <button id="closeAddReminderModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Reminder Title</label>
+            <input type="text" id="newReminderTitle" placeholder="e.g. Hostel Mess Fee Due" />
+          </div>
+          <div class="form-group">
+            <label>Expected Amount (₹)</label>
+            <input type="number" id="newReminderAmount" placeholder="e.g. 2400" min="0" />
+          </div>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" id="newReminderDate" />
+          </div>
+          <button id="saveReminderBtn" class="btn-amber full-width">Add Reminder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ANDROID BRIDGE SETUP -->
+    <div id="bridgeModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Android Notification Bridge</h3>
+          <button id="closeBridgeModalBtn" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-desc">Stream phone push notifications (GPay, PhonePe, Paytm, bank SMS) into Campus Ledger:</p>
+          <div class="bridge-steps">
+            <div class="bridge-step">
+              <strong>1. WebOTP Native SMS:</strong>
+              <p>Tap "Start Listening for Phone SMS" on the Ledger tab (Android Chrome only).</p>
+            </div>
+            <div class="bridge-step">
+              <strong>2. 1-Tap Clipboard:</strong>
+              <p>Copy a transaction message, then click "Read Copied SMS".</p>
+            </div>
+            <div class="bridge-step">
+              <strong>3. MacroDroid / Tasker Webhook (needs a backend):</strong>
+              <p>This page has no server, so the webhook below is only simulated. To use it for real, add an endpoint such as <code>POST /api/incoming-notification</code> with <code>{"text": "your SMS text"}</code>.</p>
+            </div>
+          </div>
+          <button id="simulateBridgeTestBtn" class="btn-amber full-width">Send Test Webhook Notification</button>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
